@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mental Health Support Chatbot (Frontend Only)</title>
+<meta name="description" content="A supportive, on-device mental-health chatbot with basic NLP, crisis guardrails, grounding tools, and journaling.">
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#121a2b;
+    --accent:#7c9eff;
+    --accent-2:#8ef6d2;
+    --text:#e9eefc;
+    --muted:#9fb0d3;
+    --danger:#ff5978;
+    --warning:#ffdd57;
+    --ok:#6ee7b7;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --radius:20px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:linear-gradient(180deg,#0b1220,#0c1223 40%,#0a1120 100%) fixed;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    color:var(--text);
+  }
+  header{
+    position:sticky; top:0; z-index:5;
+    backdrop-filter: blur(10px);
+    background:rgba(12,18,35,.7);
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .bar{
+    max-width:1100px;margin:0 auto;padding:14px 16px; display:flex; align-items:center; gap:12px;
+  }
+  .logo{
+    width:38px;height:38px;border-radius:12px; background: radial-gradient(120% 120% at 30% 20%, var(--accent), #4b66ff 50%, #2b3770 100%);
+    box-shadow: var(--shadow);
+  }
+  h1{font-size:18px;margin:0}
+  .sub{color:var(--muted); font-size:13px}
+  .wrap{
+    max-width:1100px;margin:18px auto; display:grid; grid-template-columns: 1fr 320px; gap:18px; padding:0 16px;
+  }
+  @media (max-width: 980px){
+    .wrap{grid-template-columns:1fr}
+  }
+  .chat{
+    background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius);
+    display:flex; flex-direction:column; min-height:70vh; box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .chatlog{
+    padding:18px; overflow:auto; height:60vh; scroll-behavior:smooth;
+  }
+  .msg{ display:flex; gap:10px; margin:8px 0; }
+  .msg .bubble{
+    padding:12px 14px; border-radius:16px; line-height:1.45; max-width:85%;
+    border:1px solid rgba(255,255,255,.06);
+    box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  }
+  .msg.user{ justify-content:flex-end}
+  .msg.user .bubble{
+    background:linear-gradient(180deg, #1b2a4d, #1a2442);
+    border-top-right-radius:6px;
+  }
+  .msg.bot .bubble{
+    background:linear-gradient(180deg,#121b2f,#101a2b);
+    border-top-left-radius:6px;
+  }
+  .stamp{ font-size:11px; color:var(--muted); margin-top:4px}
+  .sys-banner{
+    margin:4px 0 12px 0; font-size:12px; color:var(--muted);
+  }
+  .inputbar{
+    display:flex; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,.06);
+    background:rgba(0,0,0,.15);
+  }
+  textarea{
+    flex:1; resize:none; border:none; outline:none; border-radius:14px; padding:12px 14px; min-height:48px; color:var(--text);
+    background:#0c1426; border:1px solid rgba(255,255,255,.08);
+  }
+  .btn{
+    border:none; border-radius:12px; padding:10px 14px; color:#071021; font-weight:600; cursor:pointer;
+    background:linear-gradient(180deg, var(--accent), #597bff); box-shadow: var(--shadow);
+  }
+  .btn.secondary{ background:linear-gradient(180deg,#2a3559,#1a2240); color:var(--text); border:1px solid rgba(255,255,255,.08)}
+  .btn.ghost{ background:transparent; color:var(--muted); border:1px dashed rgba(255,255,255,.2)}
+  .btn.danger{ background:linear-gradient(180deg,var(--danger),#e83f63); color:white}
+  .btn.ok{ background:linear-gradient(180deg,var(--ok),#2bcf99); color:#05221a}
+  .btn.small{ padding:8px 10px; font-size:12px}
+  .tools{
+    background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); padding:14px;
+    box-shadow: var(--shadow);
+  }
+  .tool-card{
+    background:#0f182c; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:12px; margin-bottom:12px;
+  }
+  .tool-card h3{ margin:0 0 6px; font-size:15px}
+  .tool-card p{ margin:0 0 8px; color:var(--muted); font-size:13px}
+  .row{ display:flex; gap:8px; flex-wrap:wrap}
+  .badge{ font-size:11px; color:#061022; background:var(--accent-2); padding:4px 8px; border-radius:999px; font-weight:700}
+  .tag{ font-size:11px; color:var(--muted); border:1px solid rgba(255,255,255,.1); padding:4px 8px; border-radius:999px}
+  .pill{ background:rgba(140,160,255,.12); border:1px solid rgba(140,160,255,.25); color:var(--text); padding:6px 10px; border-radius:10px; cursor:pointer; font-size:12px}
+  .flex{ display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .spacer{ flex:1 }
+  .hr{ height:1px; background:rgba(255,255,255,.06); margin:10px 0}
+  .notice{
+    background: #1a2339; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px; font-size:12px; color:var(--muted)
+  }
+  .crisis{
+    border:1px solid rgba(255,255,255,.1);
+    background:linear-gradient(180deg, rgba(255, 89, 120, .12), rgba(255, 89, 120, .05));
+    border-left:4px solid var(--danger);
+    padding:10px; border-radius:14px; margin:8px 0;
+  }
+  .breath-card{
+    text-align:center; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,#0f1930, #0d1629);
+  }
+  .circle{
+    width:140px; height:140px; border-radius:50%;
+    margin:10px auto; border:2px dashed rgba(255,255,255,.2);
+    display:grid; place-items:center;
+  }
+  .circle .dot{
+    width:60px; height:60px; border-radius:50%;
+    background:radial-gradient(120% 120% at 30% 20%, var(--accent-2), #49c9a8 60%, #1a6b59 100%);
+    transition: transform 1s ease-in-out;
+    box-shadow: 0 10px 25px rgba(0,0,0,.35), inset 0 0 20px rgba(255,255,255,.15);
+  }
+  .kbd{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    font-size:12px; background:#0c1528; border:1px solid rgba(255,255,255,.1); border-bottom:3px solid rgba(255,255,255,.18);
+    padding:2px 6px; border-radius:6px; color:var(--muted)
+  }
+  .footer{
+    color:var(--muted); font-size:12px; padding:8px 0 12px; text-align:center
+  }
+  a, .link{ color:var(--accent-2); text-decoration: none }
+  a:hover{ text-decoration: underline }
+  .fade-in{ animation: fadein .35s ease-out both }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)} }
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="bar" role="banner" aria-label="App header">
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>CalmLeaf — Supportive Chat</h1>
+        <div class="sub">Compassionate, skill-based guidance. No accounts. Everything runs in your browser.</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn small secondary" id="exportBtn" title="Download your conversation as a text file">Export Chat</button>
+      <button class="btn small danger" id="clearBtn" title="Clear all messages">Reset</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="chat" aria-label="Chat area">
+      <div class="chatlog" id="chatlog" aria-live="polite" aria-relevant="additions text">
+        <div class="sys-banner notice fade-in">
+          <div style="font-weight:600; color:#bcd0ff">Kind reminder</div>
+          This chatbot offers general support and education (CBT/DBT-style prompts, grounding, journaling). It’s not a replacement for a licensed professional.
+          If you might harm yourself or someone else, please call your local emergency number (e.g., <b>112</b> in India) or contact nearby crisis services.
+        </div>
+      </div>
+      <form class="inputbar" id="form" autocomplete="off">
+        <label class="sr-only" for="userInput">Message</label>
+        <textarea id="userInput" name="userInput" placeholder="Share what's on your mind. You can also try: 'I'm anxious about exams' or 'Guide a 4-7-8 breathing'." rows="2" aria-label="Message input"></textarea>
+        <button type="submit" class="btn" id="sendBtn" aria-label="Send message">Send</button>
+      </form>
+    </section>
+
+    <aside class="tools" aria-label="Tools and quick actions">
+      <div class="flex">
+        <span class="badge">Well-being Tools</span>
+        <span class="tag">On-device</span>
+        <span class="tag">Private</span>
+      </div>
+      <div class="tool-card">
+        <h3>Quick Prompts</h3>
+        <div class="row" id="quickPrompts"></div>
+      </div>
+      <div class="tool-card">
+        <h3>Breathing (4-7-8)</h3>
+        <div class="breath-card">
+          <div class="circle" aria-hidden="true"><div class="dot" id="breathDot"></div></div>
+          <div id="breathLabel" class="sub" style="text-align:center">Press Start</div>
+          <div class="row" style="justify-content:center; margin-top:8px">
+            <button class="btn small ok" id="startBreath">Start</button>
+            <button class="btn small secondary" id="stopBreath">Stop</button>
+          </div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <h3>Grounding (5-4-3-2-1)</h3>
+        <p>Notice 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.</p>
+        <button class="btn small secondary" id="groundBtn">Guide me</button>
+      </div>
+      <div class="tool-card">
+        <h3>Journal Prompt</h3>
+        <p>Write for 3–5 minutes without editing. You can paste into chat if you want feedback.</p>
+        <div class="row">
+          <button class="btn small secondary" data-journal="What feels heavy right now, and what’s one small action that could make it 1% lighter?">What's heavy?</button>
+          <button class="btn small secondary" data-journal="What thought keeps looping? Try writing the thought, the feeling it triggers, and a kinder alternative.">Thought loop</button>
+          <button class="btn small secondary" data-journal="List 3 things within your control today and 3 things outside your control.">Control list</button>
+        </div>
+      </div>
+      <div class="tool-card">
+        <h3>Resources</h3>
+        <div class="notice">
+          If you’re in immediate danger: call local emergency services (e.g., <b>112</b> in India). You can also search for local crisis lines or helplines in your area.
+        </div>
+      </div>
+      <div class="footer">Built for learning & support. Your messages are stored only in this browser (LocalStorage).</div>
+    </aside>
+  </main>
+
+<script>
+/**
+ * CalmLeaf — front-end only supportive chatbot
+ * - Basic NLP: keyword intents + tiny sentiment
+ * - Skill prompts: CBT reframing, grounding, breathing
+ * - Crisis guardrails and resource nudge
+ * - Local persistence + export
+ * NOTE: This is educational software, not medical advice.
+ */
+
+const chatlog = document.getElementById('chatlog');
+const form = document.getElementById('form');
+const input = document.getElementById('userInput');
+const exportBtn = document.getElementById('exportBtn');
+const clearBtn = document.getElementById('clearBtn');
+const quickPromptsEl = document.getElementById('quickPrompts');
+const groundBtn = document.getElementById('groundBtn');
+
+// ---- Quick prompts
+const QUICK_PROMPTS = [
+  "I'm feeling anxious about an exam.",
+  "I can't stop overthinking.",
+  "Guide me through grounding.",
+  "Help me sleep; my mind is racing.",
+  "I'm stressed about relationships.",
+  "I feel low and unmotivated.",
+  "Teach cognitive reframing.",
+  "Walk me through a tiny next step."
+];
+QUICK_PROMPTS.forEach(p=>{
+  const b=document.createElement('button');
+  b.className='pill';
+  b.textContent=p;
+  b.addEventListener('click', ()=>{
+    input.value=p; input.focus();
+  });
+  quickPromptsEl.appendChild(b);
+});
+
+// ---- Local storage
+const storeKey = 'calmleaf_chat_v1';
+function saveChat(){
+  const data = Array.from(chatlog.querySelectorAll('.msg')).map(m=>({
+    role: m.classList.contains('user')?'user':'bot',
+    html: m.querySelector('.bubble').innerHTML,
+    stamp: m.querySelector('.stamp')?.textContent || ''
+  }));
+  localStorage.setItem(storeKey, JSON.stringify(data));
+}
+function loadChat(){
+  const raw = localStorage.getItem(storeKey);
+  if(!raw) { seedGreeting(); return; }
+  try{
+    const rows = JSON.parse(raw);
+    rows.forEach(r=> appendMessage(r.role, r.html, r.stamp, true));
+  }catch(e){ console.warn('Could not parse chat', e); seedGreeting(); }
+}
+function seedGreeting(){
+  botSay(`Hi, I’m <b>CalmLeaf</b> 🌿<br/>
+  Thanks for opening up. I can listen and also teach skills like grounding, paced breathing, and gentle CBT reframing.<br/><br/>
+  If it helps, try one of the quick prompts on the right—or just tell me what’s going on.`);
+}
+
+// ---- Render helpers
+function timeStamp(){
+  const d=new Date();
+  return d.toLocaleString([], {hour:'2-digit', minute:'2-digit'});
+}
+function appendMessage(role, html, stamp=null, fromLoad=false){
+  const row = document.createElement('div');
+  row.className = `msg ${role} fade-in`;
+  row.setAttribute('role','article');
+  row.setAttribute('aria-label', role==='user'?'User message':'Assistant message');
+
+  const bubble = document.createElement('div');
+  bubble.className='bubble';
+  bubble.innerHTML = html;
+
+  const time = document.createElement('div');
+  time.className='stamp';
+  time.textContent = stamp || timeStamp();
+
+  row.appendChild(bubble);
+  row.appendChild(time);
+  chatlog.appendChild(row);
+  chatlog.scrollTop = chatlog.scrollHeight;
+
+  if(!fromLoad) saveChat();
+}
+function userSay(text){ appendMessage('user', escapeHtml(text)); }
+function botSay(html){ appendMessage('bot', html); }
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+}
+
+// ---- Tiny NLP
+const crisisKeywords = [
+  'suicide','suicidal','kill myself','end my life','end it all',
+  'self harm','self-harm','hurt myself','cut myself','overdose','no reason to live'
+];
+const intents = {
+  anxiety: ['anxious','anxiety','panic','nervous','worried','overthink','overthinking','stressed'],
+  lowMood: ['depressed','down','sad','empty','low','numb','unmotivated','hopeless'],
+  sleep: ['sleep','insomnia','can\'t sleep','racing thoughts','tired at night'],
+  relationship: ['relationship','breakup','friend','family','partner','argue','conflict','lonely'],
+  workStudy: ['exam','study','deadline','work','boss','college','school','grades','job'],
+  anger: ['angry','irritated','frustrated','rage'],
+  grief: ['loss','grief','passed away','funeral','miss them']
+};
+
+// simple sentiment scoring (tiny, heuristic)
+const positiveWords = ['hope','grateful','progress','better','calm','okay','relief','improved','proud','win'];
+const negativeWords = ['sad','angry','anxious','panic','worthless','guilty','ashamed','hopeless','tired','lonely','overwhelmed','scared','afraid'];
+
+function scoreSentiment(txt){
+  const t = txt.toLowerCase();
+  let s = 0;
+  positiveWords.forEach(w=>{ if(t.includes(w)) s+=1; });
+  negativeWords.forEach(w=>{ if(t.includes(w)) s-=1; });
+  return s;
+}
+
+function detectIntent(txt){
+  const t = txt.toLowerCase();
+  if(crisisKeywords.some(k=> t.includes(k))) return 'crisis';
+  for(const [k, arr] of Object.entries(intents)){
+    if(arr.some(w=> t.includes(w))) return k;
+  }
+  return 'general';
+}
+
+// ---- Response generation
+const empathicLeads = [
+  "Thanks for sharing that. I’m listening.",
+  "That sounds really tough; I’m glad you told me.",
+  "Your feelings make sense given what you’re facing.",
+  "I hear you. We can take this one small step at a time."
+];
+
+function formatCrisis(){
+  return `
+    <div class="crisis">
+      <div style="font-weight:700; margin-bottom:6px">If you’re thinking about harming yourself:</div>
+      <ul style="margin:0 0 6px 18px; padding:0; line-height:1.5">
+        <li>Call local emergency services (e.g., <b>112</b> in India).</li>
+        <li>Consider reaching out to a trusted person right now.</li>
+        <li>If you can, go to a safe place or remove anything you could use to harm yourself.</li>
+      </ul>
+      <div>We can also try a grounding or breathing exercise together below.</div>
+    </div>`;
+}
+
+function suggestionsForIntent(intent){
+  switch(intent){
+    case 'anxiety':
+      return `
+        Let’s try a two-part plan:<br/>
+        1) <b>Body first</b> — try the 4-7-8 breath (Start on the right).<br/>
+        2) <b>Mind next</b> — write the worry as “<i>If X happens, then I will Y</i>.” Identify <b>what’s controllable</b> vs <b>what’s not</b> and a tiny next step (≤10 minutes).`;
+    case 'lowMood':
+      return `Low mood can shrink our world. Two gentle nudges:<br/>
+        • <b>Behavioral activation:</b> pick one tiny, doable action (shower, sunlight for 5 minutes, or reply to one message).<br/>
+        • <b>Self-talk reframe:</b> if a friend felt this way, what would you say to them? Try telling that to yourself.`;
+    case 'sleep':
+      return `For racing thoughts at night:<br/>
+        • Try 4-7-8 breathing or “Box breathing” 4-4-4-4.<br/>
+        • Keep a pen/paper “worry dump” by the bed; write down loops and tell your brain “I’ve saved this; I’ll revisit tomorrow.”<br/>
+        • If awake >20 min, get up and do something low-stim until sleepy.`;
+    case 'relationship':
+      return `Relationships get bumpy. A quick template:<br/>
+        • <b>Feel:</b> “When [event], I felt [emotion].”<br/>
+        • <b>Need:</b> “I need [specific, doable request].”<br/>
+        • <b>Listen:</b> reflect back what you heard them say before replying.`;
+    case 'workStudy':
+      return `For study/work stress:<br/>
+        • Try a <b>10-min starter</b> timer. Pick a <b>tiny</b> slice of the task.<br/>
+        • Define “done for today” as one concrete checkbox. Then stop—rest is strategic.`;
+    case 'anger':
+      return `Anger = protected pain. Try:<br/>
+        • Pause body: 4 slow breaths, drop shoulders, unclench jaw.<br/>
+        • Name the need under the anger (respect, fairness, safety, rest?).<br/>
+        • Ask for that need with a calm, specific request.`;
+    case 'grief':
+      return `Grief has no neat stages. A practice:<br/>
+        • Tell a short story about your person: a memory, a smell, a phrase they loved.<br/>
+        • Notice one thing that brings a <i>moment</i> of ease (tea, sunlight, music). That’s not forgetting; it’s breathing.`;
+    default:
+      return `Would you like a quick tool—<b>grounding</b>, <b>breathing</b>, or a <b>reframe</b>? You can also ask for a “tiny next step”.`;
+  }
+}
+
+function cbtReframePrompt(text){
+  const starters = [
+    "What’s the evidence for and against this thought?",
+    "If a friend had this thought, what would you say to them?",
+    "Is there a more balanced way to phrase it that’s still honest?",
+    "What’s one small action you can take that would help, even 1%?"
+  ];
+  return `
+    <div class="notice">
+      <div style="font-weight:700; color:#cbe1ff; margin-bottom:6px">Let’s try a gentle reframe</div>
+      <b>Your thought:</b> “${escapeHtml(text.slice(0,120))}${text.length>120?'…':''}”<br/>
+      ${starters.map(s=>`• ${s}`).join('<br/>')}
+    </div>`;
+}
+
+function generateReply(userText){
+  const text = userText.trim();
+  const intent = detectIntent(text);
+  const sentiment = scoreSentiment(text);
+  const lead = empathicLeads[Math.floor(Math.random()*empathicLeads.length)];
+
+  if(intent === 'crisis'){
+    return lead + "<br/><br/>" + formatCrisis() + `<div class="hr"></div>` + `
+      If it’s okay, we can do 60 seconds of breathing together. When you feel ready, you might also share <b>one</b> thing that keeps you here today.`;
+  }
+
+  // direct commands
+  if(/ground(ing)?/i.test(text)) return lead + "<br/><br/>" + guideGrounding();
+  if(/breath|breathe|4-7-8|478|box breathing/i.test(text)) return lead + "<br/><br/>" + guideBreathing();
+  if(/reframe|cbt|cognitive/i.test(text)) return lead + "<br/><br/>" + cbtReframePrompt(text);
+  if(/tiny next step|small step|next step/i.test(text)) return lead + "<br/><br/>" + tinyStep(text);
+
+  // intent-based suggestion
+  let sug = suggestionsForIntent(intent);
+
+  // sentiment tail
+  let tail = '';
+  if(sentiment <= -2) tail = "<br/><br/>I’m sorry it’s this heavy. Let’s choose something kinder-than-perfect. What would make the next hour 1% easier?";
+  else if(sentiment === -1) tail = "<br/><br/>Thanks for telling me. We’ll go gently—no all-or-nothing goals.";
+  else if(sentiment >= 1) tail = "<br/><br/>I notice a little hope in what you wrote—let’s use that momentum.";
+
+  // optional CBT prompt
+  const maybeCBT = Math.random() < 0.5 ? cbtReframePrompt(text) : '';
+
+  return `${lead}<br/><br/>${sug}${tail}<br/><br/>${maybeCBT}`;
+}
+
+function guideGrounding(){
+  return `
+    <div class="notice">
+      <b>5-4-3-2-1 Grounding</b><br/>
+      • Name <b>5 things</b> you can see.<br/>
+      • <b>4</b> you can feel (clothes on skin, feet on floor).<br/>
+      • <b>3</b> you can hear.<br/>
+      • <b>2</b> you can smell.<br/>
+      • <b>1</b> you can taste or a slow sip of water.<br/><br/>
+      You can type them here if you’d like me to reflect them back.
+    </div>`;
+}
+function guideBreathing(){
+  return `
+    <div class="notice">
+      <b>4-7-8 Breathing</b><br/>
+      Inhale 4 • Hold 7 • Exhale 8 — repeat 4 rounds. You can press <span class="kbd">Start</span> in the panel for a visual guide.
+    </div>`;
+}
+function tinyStep(text){
+  return `
+    <div class="notice">
+      <b>Tiny Next Step</b><br/>
+      What is the <i>easiest 10-minute slice</i> of this? Set a timer, start imperfectly, and stop when it ends. Consistency beats intensity here.
+    </div>`;
+}
+
+// ---- Form submit
+form.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const text = input.value.trim();
+  if(!text) return;
+  userSay(text);
+  input.value = '';
+  setTimeout(()=>{
+    const reply = generateReply(text);
+    botSay(reply);
+  }, 300);
+});
+
+// ---- Export / Clear
+exportBtn.addEventListener('click', ()=>{
+  const rows = Array.from(chatlog.querySelectorAll('.msg')).map(m=>{
+    const who = m.classList.contains('user') ? 'You' : 'CalmLeaf';
+    const stamp = m.querySelector('.stamp')?.textContent || '';
+    const text = m.querySelector('.bubble').innerText.replace(/\s+\n/g,'\n').trim();
+    return `[${stamp}] ${who}: ${text}`;
+  }).join('\n\n');
+  const blob = new Blob([rows], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'calmleaf_chat.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 500);
+});
+clearBtn.addEventListener('click', ()=>{
+  if(confirm('This will clear all messages stored in this browser. Continue?')){
+    localStorage.removeItem(storeKey);
+    chatlog.innerHTML='';
+    seedGreeting();
+    saveChat();
+  }
+});
+
+// ---- Grounding button and journal template buttons
+groundBtn.addEventListener('click', ()=> botSay(guideGrounding()));
+document.querySelectorAll('[data-journal]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    input.value = btn.getAttribute('data-journal');
+    input.focus();
+  });
+});
+
+// ---- Breathing animation
+let breathingTimer = null;
+const breathDot = document.getElementById('breathDot');
+const breathLabel = document.getElementById('breathLabel');
+const startBreath = document.getElementById('startBreath');
+const stopBreath = document.getElementById('stopBreath');
+
+function runBreathing(){
+  // 4 in, 7 hold, 8 out
+  const phases = [
+    {label:'Inhale… 4', dur:4000, scale:1.35},
+    {label:'Hold… 7', dur:7000, scale:1.35},
+    {label:'Exhale… 8', dur:8000, scale:0.7},
+  ];
+  let i=0;
+  function next(){
+    const p = phases[i%phases.length];
+    breathLabel.textContent = p.label;
+    breathDot.style.transform = `scale(${p.scale})`;
+    breathingTimer = setTimeout(()=>{ i++; next(); }, p.dur);
+  }
+  next();
+}
+startBreath.addEventListener('click', ()=>{
+  clearTimeout(breathingTimer);
+  runBreathing();
+});
+stopBreath.addEventListener('click', ()=>{
+  clearTimeout(breathingTimer);
+  breathLabel.textContent = 'Paused';
+  breathDot.style.transform = 'scale(1)';
+});
+
+// ---- Load existing chat and announce
+loadChat();
+
+// ---- Accessibility shortcut: Ctrl/Cmd + Enter to send
+input.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('sendBtn').click();
+  }
+});
+
+</script>
+</body>
+</html>
