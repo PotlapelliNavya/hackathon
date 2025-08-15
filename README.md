@@ -1,4 +1,5 @@
 🤖 AI-Powered Mental Health Support Chatbot
+
 📌 Project Overview
 
 This project aims to develop an AI-powered chatbot that offers accessible, real-time mental health support and counseling. By leveraging Natural Language Processing (NLP), sentiment analysis, and pre-trained language models, the chatbot understands user emotions, responds empathetically, and provides helpful mental wellness guidance. The tool serves as a supportive, non-judgmental first line of help—especially for individuals who are hesitant to seek traditional therapy.
